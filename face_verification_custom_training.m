@@ -223,7 +223,9 @@ if isequal(testFileName, 0)
     error('No files selected.');
 end
 testImages = fullfile(testFilePath, testFileName);
-
+testImage = imread(testImagePath);
+testImage = imresize(testImage, inputSize(1:2));
+imdsTest = imageDatastore(testImages);
 % Extract features for test images
 testFeatures = activations(netTransfer, imdsTest, 'relu_conv10', 'OutputAs', 'rows');
 
