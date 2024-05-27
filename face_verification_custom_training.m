@@ -217,9 +217,6 @@ options = trainingOptions('adam', ...
 % Train the network
 netTransfer = trainNetwork(imdsTrain, lgraph, options);
 
-
-
-
 % Allow the user to select test images
 [testFileName, testFilePath] = uigetfile({'*.jpg;*.png;*.bmp;*.tif', 'Image Files (*.jpg, *.png, *.bmp, *.tif)'; '*.*', 'All Files (*.*)'}, 'Select Test Images', 'MultiSelect', 'on');
 if isequal(testFileName, 0)
@@ -227,16 +224,27 @@ if isequal(testFileName, 0)
 end
 testImages = fullfile(testFilePath, testFileName);
 
-% Create an imageDatastore for the selected test images
-imdsTest = imageDatastore(testImages);
+% Extract features for test images
+testFeatures = activations(netTransfer, imdsTest, 'relu_conv10', 'OutputAs', 'rows');
 
-% Predict on the test set
-YPred = classify(netTransfer, imdsTest);
+% Extract features for all dataset images
+datasetFeatures = activations(netTransfer, imds, 'relu_conv10', 'OutputAs', 'rows');
 
-% Display predictions
+% Compute cosine similarity between test images and dataset images
+numTestImages = numel(imdsTest.Files);
+numDatasetImages = numel(imds.Files);
+similarityScores = datasetFeatures * testFeatures' ./ (vecnorm(datasetFeatures, 2, 2) * norm(testFeatures));
+
+% Find the top 5 most similar images
+[~, idx] = sort(similarityScores, 'descend');
+top5Idx = idx(1:5);
+
+% Display the top 5 similar images
 figure;
-for i = 1:min(5, numel(YPred))
+for i = 1:5
     subplot(1, 5, i);
-    imshow(imread(testImages{i}));
-    title(YPred(i));
+    imshow(readimage(imds, top5Idx(i)));
+    title(sprintf('Similarity: %.2f', similarityScores(top5Idx(i))));
 end
+
+disp('Top 5 similar images displayed.');
